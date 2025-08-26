@@ -105,11 +105,12 @@ class EATER(Node):
 
         self.pub_vel(vx, wz)
 
-        if distance < 0.1 and self.pizza_count != self.pizza_max:
+        if distance < 0.1:
             self.pub_vel(0.0,0.0)
-            self.waypoint.pop(0)
-            if self.pizza_spawn_count <= self.pizza_max:
-                self.eat_pizza()
+            if self.pizza_count != self.pizza_max:
+                self.waypoint.pop(0)
+                if self.pizza_spawn_count <= self.pizza_max:
+                    self.eat_pizza()
 
         # print(self.pizza_max)
         return
