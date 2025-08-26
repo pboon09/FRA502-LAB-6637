@@ -120,6 +120,8 @@ Below is example
 ### Usage
 
 From this point, you must run in this order ONLY!
+You need to open 5 terminals and all those terminal must be already sourced!
+
 1. **turtlesim_plus_node**:
    ```bash
    ros2 run turtlesim_plus turtlesim_plus_node.py
