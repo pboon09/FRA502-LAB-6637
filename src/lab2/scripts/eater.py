@@ -13,7 +13,7 @@ import math
 
 class EATER(Node):
     def __init__(self):
-        super().__init__('eater')
+        super().__init__('eater_node')
         self.robot_pose = None
         self.waypoint = []
 
@@ -54,17 +54,20 @@ class EATER(Node):
 
     def mouse_callback(self, msg):
         waypoint = [msg.x, msg.y]
-        self.waypoint.append(waypoint)
         self.spawn_pizza(waypoint[0], waypoint[1])
-        if self.pizza_count == self.pizza_max or self.pizza_spawn_count :
+        if self.pizza_count == self.pizza_max and self.pizza_spawn_count >= self.pizza_max:
             self.waypoint = [waypoint]
+        else:
+            self.waypoint.append(waypoint)
 
     def rviz_callback(self, msg):
         waypoint = [msg.pose.position.x + 5.44, msg.pose.position.y + 5.44]
-        self.waypoint.append(waypoint)
         self.spawn_pizza(waypoint[0], waypoint[1])
-        if self.pizza_count == self.pizza_max:
-            self.waypoint = waypoint
+        if self.pizza_count == self.pizza_max and self.pizza_spawn_count >= self.pizza_max:
+            self.waypoint = [waypoint]
+        else:
+            self.waypoint.append(waypoint)
+
     
     def pose_callback(self, msg):
         self.robot_pose = [msg.x, msg.y, msg.theta]
@@ -91,10 +94,10 @@ class EATER(Node):
         error_theta = goal_theta - self.robot_pose[2]
         theta = math.atan2(math.sin(error_theta), math.cos(error_theta))
 
-        linear_gain = 10.00
-        angular_gain = 10.0
+        linear_gain = 10.0
+        angular_gain = 20.0
 
-        max_linear = 5.0
+        max_linear = 10.0
         max_angular = 20.0
 
         vx = min(max_linear , max(-max_linear, distance * linear_gain))

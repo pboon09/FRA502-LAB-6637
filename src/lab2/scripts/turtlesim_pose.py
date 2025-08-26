@@ -11,7 +11,7 @@ from tf2_ros import TransformBroadcaster
 
 class turtlesim_pose(Node):
     def __init__(self):
-        super().__init__('turtlesim_pose')
+        super().__init__('odom_pub')
 
         self.tf_broadcaster = TransformBroadcaster(self)
 

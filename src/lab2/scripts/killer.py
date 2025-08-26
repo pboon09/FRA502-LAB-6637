@@ -13,7 +13,7 @@ import math
 
 class KILLER(Node):
     def __init__(self):
-        super().__init__('killer')
+        super().__init__('killer_node')
         self.robot_pose1 = None
         self.robot_pose2 = None
 
@@ -32,6 +32,7 @@ class KILLER(Node):
         self.kill_client = self.create_client(Kill, '/remove_turtle')
         self.spawn_client = self.create_client(Spawn, '/spawn_turtle')
 
+        self.spawn_client.wait_for_service()
         self.spawn_turtle()
 
         self.create_timer(0.01, self.timer_callback)
@@ -83,9 +84,9 @@ class KILLER(Node):
             theta = math.atan2(math.sin(error_theta), math.cos(error_theta))
             
             linear_gain = 10.00
-            angular_gain = 10.0
+            angular_gain = 20.0
 
-            max_linear = 3.0
+            max_linear = 10.0
             max_angular = 20.0
 
             vx = min(max_linear , max(-max_linear, distance * linear_gain))
