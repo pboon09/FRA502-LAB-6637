@@ -146,11 +146,11 @@ You need to open 5 terminals and all those terminal must be already sourced!
    ```bash
    rviz2
    ```  
-   When Rviz2 is opened, clicked `File` -> `Open Config`
+   - When Rviz2 is opened, clicked `File` -> `Open Config`
    Then navigate to the `~/FRA502-LAB-6637/src/`. You will see `lab2.rviz`. Click that file.
-
-   Right now, you can only spawn 5 pizza per round only. You can edit the `self.pizza_max` in `../src/lab2/scripts/eater.py` and `../src/lab2/scripts/killer.py`
-   Be aware that the `self.pizza_max` in both file must be equal only!
+   - Right now, you can only spawn 5 pizza per round only. You can edit the `self.pizza_max` in `../src/lab2/scripts/eater.py` and `../src/lab2/scripts/killer.py`
+   - After you made change, please build again.
+   - Be aware that the `self.pizza_max` in both file must be equal only!
 
 
 Modify the commands to match your package and node names. below here
