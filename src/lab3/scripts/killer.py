@@ -83,6 +83,10 @@ class KILLER(Node):
             self.get_logger().info("Wait for pose")
             return
         
+        if self.is_kill:
+            self.pub_vel(0.0,0.0)
+            return
+        
         if self.can_eat:
             delta_x = self.robot_pose1[0] - self.robot_pose2[0]
             delta_y = self.robot_pose1[1] - self.robot_pose2[1]
@@ -97,15 +101,14 @@ class KILLER(Node):
 
             self.pub_vel(vx, wz)
 
-            if distance < 0.05:
+            if distance < 0.5:
                 self.kill_turtle()
                 self.pub_vel(0.0,0.0)
+                self.can_eat = False
                 return
         else:
             self.pub_vel(0.0,0.0)
-            
-        if self.is_kill:
-            self.pub_vel(0.0,0.0)
+            return
     
 
 
