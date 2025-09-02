@@ -63,10 +63,12 @@ class EATER(Node):
     def set_max_pizza_callback(self, request, response):
         if self.pizza_max <= request.max_pizza.data:
             self.pizza_max = request.max_pizza.data
-            response.log.data = f"SetMaxPizza to {self.pizza_max}. You can spawn {self.pizza_max - self.pizza_count} times!"
+            # response.log.data = f"SetMaxPizza to {self.pizza_max}. You can spawn {self.pizza_max - self.pizza_count} times!"
+            response.log.data = "Success"
             self.get_logger().info(f"SetMaxPizza to {self.pizza_max}. You can spawn {self.pizza_max - self.pizza_count} times!")
         else:
-            response.log.data = f"Failed: MaxPizza is less than current count!"
+            response.log.data = "Failed"
+            # response.log.data = f"Failed: MaxPizza is less than current count!"
         return response
     
     def pizza_count_callback(self, msg):
