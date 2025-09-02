@@ -3,8 +3,8 @@ from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 
 def generate_launch_description():
-    eater_turtle_ns = "nine"
-    killer_turtle_ns = "ioon"
+    eater_turtle_ns = "eater_turtle"
+    killer_turtle_ns = "killer_turtle"
     sampling_frequency = 100.0
 
     turtlesim_plus_node = Node(
