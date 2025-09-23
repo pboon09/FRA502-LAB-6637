@@ -1,0 +1,203 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="lookchoop">
+
+    <xacro:include filename="inertial_macros.xacro" />
+    <xacro:include filename="robot_params.xacro" />
+    <xacro:include filename="robot_material.xacro" />
+    <xacro:include filename="gazebo_full.xacro" />
+    
+
+    <!-- BASE LINK -->
+    <link name="world"/>
+    <!-- <joint name="world_to_base" type="fixed">
+        <parent link="world"/>
+        <child link="base_link"/>
+        <origin xyz="0 0 2" rpy="0 0 0"/>
+    </joint> -->
+
+    <joint name="world_to_base" type="prismatic">
+        <parent link="world"/>
+        <child link="base_link"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+        <limit effort="1000" velocity="10" lower="-2" upper="2"/>
+    </joint>
+
+    <link name="base_link">
+        <visual>
+            <origin xyz="0 0 0"/>
+            <geometry>
+                <box size="${W_tt} ${Y} ${L_tt}"/>
+            </geometry>
+            <material name="white"/>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0"/>
+            <geometry>
+                <box size="${W_tt} ${Y} ${L_tt}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${mass_torso}" x="${W_tt}" y="${Y}" z="${L_tt}">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="joint_1" type="revolute">
+        <parent link="base_link"/>
+        <child link="th_link"/>
+        <origin xyz="0 0 -${(L_tt/2)+L_td}" rpy="0 0 0"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="500" velocity="100" lower="${-PI}" upper="${PI}"/>
+        <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="th_link">
+        <visual>
+            <origin xyz="0 0 -${L_th/2}"/>
+            <geometry>
+                <box size="${W_th} ${Y} ${L_th}"/>
+            </geometry>
+            <material name="red"/>
+        </visual>
+        <collision>
+            <origin xyz="0 0 -${L_th/2}"/>
+            <geometry>
+                <box size="${W_th} ${Y} ${L_th}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${mass_thigh}" x="${W_th}" y="${Y}" z="${L_th}">
+            <origin xyz="0 0 -${L_th/2}"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="joint_2" type="revolute">
+        <parent link="th_link"/>
+        <child link="sh_link"/>
+        <origin xyz="0 0 -${(L_th)}"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="500" velocity="100" lower="${-PI}" upper="${PI}"/>
+        <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="sh_link">
+        <visual>
+            <origin xyz="0 0 -${L_sh/2}"/>
+            <geometry>
+                <box size="${W_sh} ${Y} ${L_sh}"/>
+            </geometry>
+            <material name="green"/>
+        </visual>
+        <collision>
+            <origin xyz="0 0 -${L_sh/2}"/>
+            <geometry>
+                <box size="${W_sh} ${Y} ${L_sh}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${mass_shank}" x="${W_sh}" y="${Y}" z="${L_sh}">
+            <origin xyz="0 0 -${L_sh/2}"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="joint_3" type="revolute">
+        <parent link="sh_link"/>
+        <child link="fh_link"/>
+        <origin xyz="0 0 -${(L_sh)}"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="500" velocity="100" lower="${-PI}" upper="${PI}"/>
+        <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="fh_link">
+        <visual>
+            <origin xyz="0 0 -${(W_fh+W_fl)/2}"/>
+            <geometry>
+                <box size="${W_sh} ${Y} ${W_fh+W_fl}"/>
+            </geometry>
+            <material name="yellow"/>
+        </visual>
+        <collision>
+            <origin xyz="0 0 -${(W_fh+W_fl)/2}"/>
+            <geometry>
+                <box size="${W_sh} ${Y} ${W_fh+W_fl}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${mass_foot*0.8}" x="${W_fh}" y="${Y}" z="${W_fh+W_fl}">
+            <origin xyz="0 0 -${(W_fh+W_fl)/2}"/>
+        </xacro:inertial_box>
+    </link>
+
+    <joint name="joint_3_1" type="fixed">
+        <parent link="fh_link"/>
+        <child link="fl_link"/>
+        <origin xyz="0 0 -${(W_fh)}"/>
+    </joint>
+
+    <link name="fl_link">
+        <visual>
+            <origin xyz="0 0 -${(W_fh)}"/>
+            <geometry>
+                <box size="${L_fb + L_fm + L_ff} ${Y} ${W_fh}"/>
+            </geometry>
+            <material name="yellow"/>
+        </visual>
+        <collision>
+            <origin xyz="0 0 -${(W_fh)}"/>
+            <geometry>
+                <box size="${L_fb + L_fm + L_ff} ${Y} ${W_fh}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${mass_foot*0.2}" x="${L_fb + L_fm + L_ff}" y="${Y}" z="${W_fh}">
+            <origin xyz="0 0 -${(W_fh)}"/>
+        </xacro:inertial_box>
+    </link>
+
+    <!-- <joint name="joint_4" type="revolute">
+        <parent link="fl_link"/>
+        <child link="t_link"/>
+        <origin xyz="${(L_fm/2)+(L_fb/2)+(L_ff/2)} 0 -${(W_fh)}"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="500" velocity="100" lower="${-PI}" upper="${PI}"/>
+        <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint> -->
+
+    <!-- <link name="t_link">
+        <visual>
+            <origin xyz="${L_t/2} 0 0"/>
+            <geometry>
+                <box size="${L_t} ${Y} ${W_fh}"/>
+            </geometry>
+            <material name="pink"/>
+        </visual>
+        <collision>
+            <origin xyz="${L_t/2} 0 0"/>
+            <geometry>
+                <box size="${L_t} ${Y} ${W_fh}"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="${mass_toe}" x="${L_t}" y="${Y}" z="${W_fh}">
+            <origin xyz="${L_t/2} 0 0"/>
+        </xacro:inertial_box>
+    </link> -->
+
+    <joint name="fh_link_to_contact" type="fixed">
+        <parent link="fh_link"/>
+        <child link="foot_contact"/>
+        <origin xyz="0 0 -${(W_fh*2)+(W_fl)}"/>
+    </joint>
+
+    <link name="foot_contact">
+        <visual>
+            <origin xyz="0 0 0"/>
+            <geometry>
+                <sphere radius="0.01"/>
+            </geometry>
+            <material name="black"/>
+        </visual>
+    </link>
+
+    <gazebo reference="base_link">
+        <material>Gazebo/White</material>
+    </gazebo>
+    
+    
+</robot>
