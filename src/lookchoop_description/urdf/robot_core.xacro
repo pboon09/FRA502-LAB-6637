@@ -9,19 +9,19 @@
 
     <!-- BASE LINK -->
     <link name="world"/>
-    <!-- <joint name="world_to_base" type="fixed">
+    <joint name="world_to_base" type="fixed">
         <parent link="world"/>
         <child link="base_link"/>
         <origin xyz="0 0 2" rpy="0 0 0"/>
-    </joint> -->
+    </joint>
 
-    <joint name="world_to_base" type="prismatic">
+    <!-- <joint name="world_to_base" type="prismatic">
         <parent link="world"/>
         <child link="base_link"/>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <axis xyz="0 0 1"/>
         <limit effort="1000" velocity="10" lower="-2" upper="2"/>
-    </joint>
+    </joint> -->
 
     <link name="base_link">
         <visual>
@@ -47,7 +47,7 @@
         <child link="th_link"/>
         <origin xyz="0 0 -${(L_tt/2)+L_td}" rpy="0 0 0"/>
         <axis xyz="0 1 0"/>
-        <limit effort="500" velocity="100" lower="${-PI}" upper="${PI}"/>
+        <limit effort="5000" velocity="100" lower="${-PI}" upper="${PI}"/>
         <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
     </joint>
 
@@ -75,7 +75,7 @@
         <child link="sh_link"/>
         <origin xyz="0 0 -${(L_th)}"/>
         <axis xyz="0 1 0"/>
-        <limit effort="500" velocity="100" lower="${-PI}" upper="${PI}"/>
+        <limit effort="5000" velocity="100" lower="${-PI}" upper="${PI}"/>
         <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
     </joint>
 
@@ -103,7 +103,7 @@
         <child link="fh_link"/>
         <origin xyz="0 0 -${(L_sh)}"/>
         <axis xyz="0 1 0"/>
-        <limit effort="500" velocity="100" lower="${-PI}" upper="${PI}"/>
+        <limit effort="5000" velocity="100" lower="${-PI}" upper="${PI}"/>
         <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
     </joint>
 

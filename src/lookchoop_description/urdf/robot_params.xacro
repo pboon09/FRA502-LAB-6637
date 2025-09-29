@@ -24,7 +24,7 @@
     <xacro:property name="mass_torso" value="0.8"/>
     <xacro:property name="mass_thigh" value="0.835"/>
     <xacro:property name="mass_shank" value="0.501"/>
-    <xacro:property name="mass_foot" value="60.159"/>
+    <xacro:property name="mass_foot" value="0.159"/>
     <xacro:property name="mass_toe" value="0.49"/>
 
 
