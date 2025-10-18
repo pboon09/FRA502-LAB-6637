@@ -5,7 +5,7 @@ from visualize import visualize_2d, generate_report, rastrigin
 
 class DualAnnealing:
     def __init__(self, func, bounds, initial_temp=5230.0, visit=2.62, accept=-5.0, 
-                 restart_temp_ratio=2e-5, maxiter=1000, maxfun=1e7, seed=None):
+                 restart_temp_ratio=2e-5, maxiter=1000, maxfun=1e7):
         self.func = func
         self.bounds = np.array(bounds)
         self.lower = self.bounds[:, 0]
@@ -17,7 +17,6 @@ class DualAnnealing:
         self.restart_temp_ratio = restart_temp_ratio
         self.maxiter = maxiter
         self.maxfun = int(maxfun)
-        self.rng = np.random.RandomState(seed)
         
         self.nfev = 0
         self.path = []
@@ -34,7 +33,7 @@ class DualAnnealing:
         factor3 = (4.0 - self.visit) * factor2
         sigmax = np.exp(factor1 + factor3) * scale
         
-        u = self.rng.uniform(-1, 1, size=self.dim)
+        u = np.random.uniform(-1, 1, size=self.dim)
         factor = sigmax * u / (1.0 - (1.0 - self.visit) * u**2)
         
         x_new = x + factor
@@ -62,7 +61,7 @@ class DualAnnealing:
     
     def optimize(self, x0=None):
         if x0 is None:
-            x_current = self.rng.uniform(self.lower, self.upper)
+            x_current = np.random.uniform(self.lower, self.upper)
         else:
             x_current = np.array(x0).flatten()
         
@@ -93,7 +92,7 @@ class DualAnnealing:
             delta_e = f_new - f_current
             p_accept = self.acceptance_probability(delta_e, temperature)
             
-            if self.rng.random() < p_accept:
+            if np.random.random() < p_accept:
                 self.accepted_count += 1
                 x_current = x_new.copy()
                 f_current = f_new
@@ -143,7 +142,8 @@ def run_experiments(dimensions, use_scipy=False, output_folder='dual_annealing')
     
     for dim in dimensions:
         bounds = [(-5.12, 5.12)] * dim
-        x0 = np.random.uniform(-5.12, 5.12, dim)
+        # x0 = np.random.uniform(-5.12, 5.12, dim)
+        x0 = np.ones(dim) * 2.5
         
         optimizer = DualAnnealing(
             rastrigin, 
@@ -151,8 +151,7 @@ def run_experiments(dimensions, use_scipy=False, output_folder='dual_annealing')
             initial_temp=5230.0,
             visit=2.62,
             accept=-5.0,
-            maxiter=1000,
-            seed=42 + dim
+            maxiter=1000
         )
         
         x_best_custom, f_best_custom = optimizer.optimize(x0)
@@ -174,8 +173,7 @@ def run_experiments(dimensions, use_scipy=False, output_folder='dual_annealing')
                 maxiter=1000,
                 initial_temp=5230,
                 visit=2.62,
-                accept=-5.0,
-                seed=42 + dim
+                accept=-5.0
             )
             
             results_scipy[dim] = {

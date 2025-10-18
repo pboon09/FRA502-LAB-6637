@@ -5,7 +5,7 @@ from visualize import visualize_2d, generate_report, rastrigin
 
 class BasinHopping:
     def __init__(self, func, bounds, niter=200, T=1.0, stepsize=0.5, 
-                 interval=50, minimizer_method='L-BFGS-B', seed=None):
+                 interval=50, minimizer_method='L-BFGS-B'):
         self.func = func
         self.bounds = np.array(bounds)
         self.lower = self.bounds[:, 0]
@@ -16,7 +16,6 @@ class BasinHopping:
         self.stepsize = stepsize
         self.interval = interval
         self.minimizer_method = minimizer_method
-        self.rng = np.random.RandomState(seed)
         
         self.nfev = 0
         self.path = []
@@ -30,7 +29,7 @@ class BasinHopping:
     def take_step(self, x):
         x_new = x.copy()
         for i in range(self.dim):
-            x_new[i] += self.rng.uniform(-self.current_stepsize, self.current_stepsize)
+            x_new[i] += np.random.uniform(-self.current_stepsize, self.current_stepsize)
         x_new = np.clip(x_new, self.lower, self.upper)
         return x_new
     
@@ -53,7 +52,7 @@ class BasinHopping:
         
         delta_f = f_new - f_old
         probability = np.exp(-delta_f / self.T)
-        return self.rng.random() < probability
+        return np.random.random() < probability
     
     def adjust_stepsize(self, iteration):
         if iteration % self.interval == 0 and iteration > 0:
@@ -134,15 +133,15 @@ def run_experiments(dimensions, use_scipy=False, output_folder='basin_hopping'):
     
     for dim in dimensions:
         bounds = [(-5.12, 5.12)] * dim
-        x0 = np.random.uniform(-5.12, 5.12, dim)
+        # x0 = np.random.uniform(-5.12, 5.12, dim)
+        x0 = np.ones(dim) * 2.5
         
         optimizer = BasinHopping(
             rastrigin, 
             bounds, 
             niter=500,
             T=2.0,
-            stepsize=1.5,
-            seed=42 + dim
+            stepsize=1.5
         )
         
         x_best_custom, f_best_custom = optimizer.optimize(x0)
@@ -164,8 +163,7 @@ def run_experiments(dimensions, use_scipy=False, output_folder='basin_hopping'):
                 niter=500,
                 T=2.0,
                 stepsize=1.5,
-                minimizer_kwargs=minimizer_kwargs,
-                seed=42 + dim
+                minimizer_kwargs=minimizer_kwargs
             )
             
             results_scipy[dim] = {
