@@ -12,9 +12,6 @@ Complete implementation and comparison of Dual Annealing and Basin Hopping algor
 4. [Quick Start](#quick-start)
 5. [Parameter Configuration](#parameter-configuration)
 6. [Output Files](#output-files)
-7. [Algorithm Comparison](#algorithm-comparison)
-8. [Troubleshooting](#troubleshooting)
-9. [References](#references)
 
 ---
 
