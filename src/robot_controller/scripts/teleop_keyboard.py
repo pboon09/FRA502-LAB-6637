@@ -5,6 +5,7 @@ from rclpy.node import Node
 from robot_interfaces.srv import ControlMode
 from geometry_msgs.msg import Twist
 import sys, select, termios, tty, threading, os
+import numpy as np
 
 class TeleopKeyboard(Node):
     def __init__(self):
@@ -14,7 +15,7 @@ class TeleopKeyboard(Node):
 
         self.current_panel = 0  # 0=IPK, 1=TO, 2=AM
         self.running = True
-        self.speed = 0.05
+        self.speed = 0.05  # base speed for movement
         self.lock = threading.Lock()
 
         self.interactive_mode = sys.stdin.isatty()
@@ -24,9 +25,19 @@ class TeleopKeyboard(Node):
         self.show_panel(self.current_panel)
         self.status("ready")
 
-        self.x = None
-        self.y = None
-        self.z = None
+        # Initial position values for x, y, z (all starting at 0.0)
+        self.x = 0.0
+        self.y = 0.0
+        self.z = 0.0
+
+        self.effector_frame_mode = True  # Default to Effector Frame
+
+        # Joint velocity limit (1 rad/s)
+        self.vel_limit = 1.0  # in rad/s
+        self.step_size = 0.05  # Step size for control
+
+        # Set the fixed publishing rate to 100 Hz
+        self.timer = self.create_timer(1.0 / 100.0, self.timer_callback)
 
     def clear(self):
         os.system('clear' if os.name == 'posix' else 'cls')
@@ -59,6 +70,8 @@ class TeleopKeyboard(Node):
                 "  j/l : +y / -y\n"
                 "  u/o : +z / -z\n"
                 "  space: stop\n"
+                "  w : switch to World Frame\n"
+                "  e : switch to Effector Frame\n"
                 "  q : quit\n"
                 "==============================\n"
             )
@@ -123,33 +136,56 @@ class TeleopKeyboard(Node):
             self.status(f"IPK requested with x={self.x} y={self.y} z={self.z}")
 
     def handle_teleop(self, key):
-        twist = Twist()
-        changed = True
+        changed = False
         if key == 'i':
-            twist.linear.x = self.speed
+            self.x = min(self.x + self.step_size, 1.0)
+            changed = True
         elif key == 'k':
-            twist.linear.x = -self.speed
+            self.x = max(self.x - self.step_size, -1.0)
+            changed = True
         elif key == 'j':
-            twist.linear.y = self.speed
+            self.y = min(self.y + self.step_size, 1.0)
+            changed = True
         elif key == 'l':
-            twist.linear.y = -self.speed
+            self.y = max(self.y - self.step_size, -1.0)
+            changed = True
         elif key == 'u':
-            twist.linear.z = self.speed
+            self.z = min(self.z + self.step_size, 1.0)
+            changed = True
         elif key == 'o':
-            twist.linear.z = -self.speed
+            self.z = max(self.z - self.step_size, -1.0)
+            changed = True
         elif key == ' ':
-            twist = Twist()
-        else:
-            changed = False
+            self.x = self.y = self.z = 0.0
+            changed = True
+        elif key == 'w': 
+            self.effector_frame_mode = False
+            self.x = self.y = self.z = 0.0
+            self.status("Switched to World Frame")
+            self.request_mode(1)
+            return
+        elif key == 'e':
+            self.effector_frame_mode = True
+            self.x = self.y = self.z = 0.0
+            self.status("Switched to Effector Frame")
+            self.request_mode(2)
+            return
 
         if changed:
-            self.cmd_pub.publish(twist)
-            self.status(f"TO vel x={twist.linear.x:.2f} y={twist.linear.y:.2f} z={twist.linear.z:.2f}")
+            self.status(f"\rCurrent Mode: {'Effector Frame' if self.effector_frame_mode else 'World Frame'} Velocity updated: {self.x:.2f}, {self.y:.2f}, {self.z:.2f}")
+            self.publish_velocity()
 
     def handle_auto_mode(self, key):
         if key == 'a':
             self.request_mode(2)
             self.status("AM requested")
+
+    def publish_velocity(self):
+        twist = Twist()
+        twist.linear.x = self.x
+        twist.linear.y = self.y
+        twist.linear.z = self.z
+        self.cmd_pub.publish(twist)
 
     def request_mode(self, mode, x=None, y=None, z=None):
         if not self.mode_client.wait_for_service(timeout_sec=1.0):
@@ -190,6 +226,9 @@ class TeleopKeyboard(Node):
             if self.interactive_mode:
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.settings)
             print("\nstopped")
+
+    def timer_callback(self):
+        self.publish_velocity()
 
     def run(self):
         thread = threading.Thread(target=self.keyboard_loop, daemon=True)

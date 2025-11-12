@@ -46,17 +46,24 @@ def generate_launch_description():
         }]
     )
 
-    delay_sec = TimerAction(
-        period=5.0,
+    delay_launch = TimerAction(
+        period=1.0,
         actions=[
-            controller,
+            robot_desc_launch
+        ]
+    )
+
+    delay_sec = TimerAction(
+        period=2.0,
+        actions=[
             random_target,
             end_effector_pub
         ]
     )
 
     ld = LaunchDescription()
-    ld.add_action(robot_desc_launch)
+    ld.add_action(controller)
+    ld.add_action(delay_launch)
     ld.add_action(delay_sec)
 
     return ld

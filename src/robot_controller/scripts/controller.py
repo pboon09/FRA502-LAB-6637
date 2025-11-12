@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from robot_interfaces.srv import ControlMode, RandomPose
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import JointState
 import numpy as np
 import roboticstoolbox as rtb
@@ -26,6 +26,8 @@ class RobotController(Node):
         self.last_target_pose = None 
         self.control_mode = None
 
+        self.task_space_velocity = np.zeros(3)
+
         self.start_time = None
         self.waiting_for_new_pose = False
 
@@ -33,6 +35,7 @@ class RobotController(Node):
 
         self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
         self.target_pub = self.create_publisher(PoseStamped, '/target', 10)
+        self.velocity_pub = self.create_subscription(Twist, '/cmd_vel', self.velocity_callback, 10)
         self.mode_srv = self.create_service(ControlMode, '/set_control_mode', self.set_mode_callback)
 
         self.create_timer(1.0 / 100.0, self.timer_callback)
@@ -67,7 +70,21 @@ class RobotController(Node):
                 response.success = False
                 response.message = "No valid IK solution found"
 
-        elif request.mode == 2 and not self.move:
+        elif request.mode == 1:
+            self.control_mode = 'TO_WF'
+            self.get_logger().info(f"Teleoperation Mode: World Frame's Velocity Control")
+            response.current_mode = 1
+            response.success = True
+            response.message = "Teleoperation Mode: World Frame's Velocity Control"
+
+        elif request.mode == 2:
+            self.control_mode = 'TO_EF'
+            self.get_logger().info(f"Teleoperation Mode: End Effector Frame's Velocity Control")
+            response.current_mode = 2
+            response.success = True
+            response.message = "Teleoperation Mode: End Effector Frame's Velocity Control"
+
+        elif request.mode == 3 and not self.move:
             self.control_mode = 'AM'
             self.move = True
             if self.last_target_pose is not None:
@@ -81,7 +98,7 @@ class RobotController(Node):
             response.current_mode = 1
             response.success = True
             
-        elif request.mode == 2 and self.move:
+        elif request.mode == 3 and self.move:
             self.control_mode = 'AM'
             self.move = False
             self.last_target_pose = self.target_pose
@@ -172,7 +189,28 @@ class RobotController(Node):
                 if elapsed_time >= 1.0:
                     self.request_random_pose()
 
-                    self.waiting_for_new_pose = False  
+                    self.waiting_for_new_pose = False 
+        
+        elif self.control_mode in ['TO_WF', 'TO_EF']:
+            if self.task_space_velocity.any():
+                J = self.robot.jacob0(self.q)
+                J_trans = J[0:3, :]
+                
+                if self.control_mode == 'TO_EF':
+                    fk_pose = self.robot.fkine(self.q)
+                    rotation_matrix = fk_pose.R 
+                    task_space_velocity_ef = rotation_matrix.T @ self.task_space_velocity
+
+                    delta_q = np.linalg.pinv(J_trans) @ task_space_velocity_ef
+                else:
+                    delta_q = np.linalg.pinv(J_trans) @ self.task_space_velocity
+
+                self.q = self.q + delta_q * 0.01
+
+            self.publish_joints()
+        
+        elif self.control_mode == 'Idle':
+            self.publish_joints()
 
     def publish_joints(self):
         js = JointState()
@@ -196,6 +234,9 @@ class RobotController(Node):
         msg.pose.orientation.w = q[3]
 
         self.target_pub.publish(msg)
+    
+    def velocity_callback(self, msg):
+        self.task_space_velocity = np.array([msg.linear.x, msg.linear.y, msg.linear.z])
 
 def main(args=None):
     rclpy.init(args=args)
