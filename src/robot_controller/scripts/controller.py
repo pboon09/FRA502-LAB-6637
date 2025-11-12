@@ -21,10 +21,13 @@ class RobotController(Node):
 
         self.q = np.zeros(self.robot.n)
         self.target_pose = None
+        self.last_target_pose = None 
         self.control_mode = None
 
         self.start_time = None
         self.waiting_for_new_pose = False
+
+        self.move = False
 
         self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
         self.mode_srv = self.create_service(ControlMode, '/set_control_mode', self.set_mode_callback)
@@ -60,16 +63,31 @@ class RobotController(Node):
                 response.success = False
                 response.message = "No valid IK solution found"
 
-        elif request.mode == 1:
+        elif request.mode == 2 and not self.move:
             self.control_mode = 'AM'
-            self.get_logger().info(f"Auto Mode: Requesting random pose")
-            self.request_random_pose()
+            self.move = True
+            if self.last_target_pose is not None:
+                self.target_pose = self.last_target_pose
+                self.get_logger().info(f"Auto Mode: Resuming last target pose")
+                response.message = "Auto Mode Resuming"
+            else:
+                self.request_random_pose()
+                self.get_logger().info(f"Auto Mode: Requesting random pose")
+                response.message = "Auto Mode Requesting"
             response.current_mode = 1
             response.success = True
-            response.message = "Auto Mode initiated"
+            
+        elif request.mode == 2 and self.move:
+            self.control_mode = 'AM'
+            self.move = False
+            self.last_target_pose = self.target_pose
+            self.get_logger().info(f"Auto Mode: Stop Moving random pose")
+            response.current_mode = 1
+            response.success = True
+            response.message = "Auto Mode Disabled"
 
         else:
-            response.current_mode = -1
+            response.current_mode = 0
             response.success = False
             response.message = "Invalid mode"
             self.get_logger().warn(f"Invalid mode: {request.mode}")
@@ -116,7 +134,7 @@ class RobotController(Node):
         if self.control_mode == 'IPK' and self.target_pose is not None:
             self.publish_joints()
 
-        elif self.control_mode == 'AM' and self.target_pose is not None:
+        elif self.control_mode == 'AM' and self.target_pose is not None and self.move:
             fk_pose = self.robot.fkine(self.q)
             current_position = fk_pose.t.flatten()
             target_position = self.target_pose.t.flatten()
