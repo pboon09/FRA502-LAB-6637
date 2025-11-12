@@ -46,13 +46,15 @@ class RobotController(Node):
 
         self.move = False
 
+        self.hz = 100.0
+
         self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
         self.target_pub = self.create_publisher(PoseStamped, '/target', 10)
         self.velocity_pub = self.create_subscription(Twist, '/cmd_vel', self.velocity_callback, 10)
         self.mode_srv = self.create_service(ControlMode, '/set_control_mode', self.set_mode_callback)
         self.reset_velocity_srv = self.create_client(Trigger, '/reset_velocity')
 
-        self.create_timer(1.0 / 100.0, self.timer_callback)
+        self.create_timer(1.0 / self.hz, self.timer_callback)
 
         self.random_pose_client = self.create_client(RandomPose, '/random_pose')
         
@@ -87,6 +89,7 @@ class RobotController(Node):
         elif request.mode == 1:
             self.control_mode = 'TO_WF'
             self.publish_pose()
+            self.move = True
             self.get_logger().info(f"Teleoperation Mode: World Frame's Velocity Control")
             response.current_mode = 1
             response.success = True
@@ -95,6 +98,7 @@ class RobotController(Node):
         elif request.mode == 2:
             self.control_mode = 'TO_EF'
             self.publish_pose()
+            self.move = True
             self.get_logger().info(f"Teleoperation Mode: End Effector Frame's Velocity Control")
             response.current_mode = 2
             response.success = True
@@ -207,7 +211,7 @@ class RobotController(Node):
 
             self.delta_q = np.linalg.pinv(J_trans) @ delta_x
 
-            self.q = self.q + self.delta_q * 0.01
+            self.q = self.q + self.delta_q * 1.0 / self.hz
 
             self.publish_joints()
 
@@ -228,7 +232,7 @@ class RobotController(Node):
 
                     self.waiting_for_new_pose = False 
         
-        elif self.control_mode in ['TO_WF', 'TO_EF']:
+        elif self.control_mode in ['TO_WF', 'TO_EF'] and self.move:
             if self.task_space_velocity.any():
                 J = self.robot.jacob0(self.q)
                 J_trans = J[0:3, :]
@@ -255,7 +259,7 @@ class RobotController(Node):
                     else:
                         self.delta_q = np.linalg.pinv(J_trans) @ self.task_space_velocity
 
-                self.q = self.q + self.delta_q * 0.01
+                self.q = self.q + self.delta_q * 1.0 / self.hz
 
             self.publish_joints()
         

@@ -24,22 +24,9 @@
 
 This ROS2 project is designed to control a 3-DOF robotic arm using inverse kinematics, teleoperation, and an auto mode. The system allows users to control the arm in different modes, compute inverse kinematics solutions, and request random poses for the robot to move to, all while adhering to the constraints of the robot's workspace.
 
-In this lab assignment, The task is to develope a control system for a 3-DOF robotic arm. The control system should be capable of:
-
-1. Inverse Kinematics Mode (IPK): Calculate the configuration space (joint angles) for the arm to reach a desired position in task space. The system should return the calculated joint configurations and move the arm to that target pose.
-<br>
-2. Teleoperation Mode (TO): The user controls the robot's end effector velocity through the `/cmd_vel` topic. The system should support two modes of operation:
-
-   - World Frame: Velocity commands are interpreted in the world frame.
-
-   - End Effector Frame: Velocity commands are interpreted in the frame attached to the end effector.
-<br>
-3. Auto Mode (AM): The system requests a random pose from the `/random_pose` service and moves the robot to that pose. After reaching the pose, the system requests another random pose.
-
-This project uses several ROS2 nodes to accomplish these tasks, including custom services for controlling modes and generating random target poses.
 
 ## System Architecture
-[![SA](./media/Exam_SA.jpg)](./media/Exam_SA.pdf)
+[![SA](./media/SA.jpg)](./media/SA.pdf)
 ### Core Components
 
 **1. Universal Controller** (`controller.py`)
@@ -66,7 +53,7 @@ A user-friendly command-line interface that allows for real-time control of the 
 ### 1. Clone Repository
 ```bash
 cd ~/
-git clone https://github.com/pboon09/FRA502-LAB-6637.git
+git clone https://github.com/pboon09/FRA502-LAB-6637.git -b LAB4
 cd FRA502-LAB-6637
 ```
 

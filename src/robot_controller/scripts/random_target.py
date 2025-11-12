@@ -12,9 +12,9 @@ class RandomPoseNode(Node):
         super().__init__('random_pose_node')
 
         self.declare_parameter('r_min', 0.020)
-        self.declare_parameter('r_max', 0.251)
-        self.declare_parameter('z_min', 0.002)
-        self.declare_parameter('z_max', 0.450)
+        self.declare_parameter('r_max', 0.530)
+        self.declare_parameter('z_min', -0.330)
+        self.declare_parameter('z_max', 0.730)
 
         self.r_min = self.get_parameter('r_min').get_parameter_value().double_value
         self.r_max = self.get_parameter('r_max').get_parameter_value().double_value
