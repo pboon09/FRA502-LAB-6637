@@ -7,6 +7,7 @@ from sensor_msgs.msg import JointState
 import numpy as np
 import roboticstoolbox as rtb
 from spatialmath import SE3
+import time
 
 class RobotController(Node):
     def __init__(self):
@@ -22,12 +23,16 @@ class RobotController(Node):
         self.target_pose = None
         self.control_mode = None
 
+        self.start_time = None
+        self.waiting_for_new_pose = False
+
         self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
         self.mode_srv = self.create_service(ControlMode, '/set_control_mode', self.set_mode_callback)
 
         self.create_timer(1.0 / 100.0, self.timer_callback)
 
         self.random_pose_client = self.create_client(RandomPose, '/random_pose')
+        
 
         self.q = np.radians([0, 90, 90])
         self.publish_joints()
@@ -58,7 +63,7 @@ class RobotController(Node):
         elif request.mode == 1:
             self.control_mode = 'AM'
             self.get_logger().info(f"Auto Mode: Requesting random pose")
-            self.request_random_pose(response)
+            self.request_random_pose()
             response.current_mode = 1
             response.success = True
             response.message = "Auto Mode initiated"
@@ -71,7 +76,7 @@ class RobotController(Node):
 
         return response
 
-    def request_random_pose(self, response):
+    def request_random_pose(self):
         if not self.random_pose_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().warn("RandomPose service not available")
             return
@@ -107,7 +112,7 @@ class RobotController(Node):
         if self.control_mode is None:
             self.publish_joints()
             return
-        
+
         if self.control_mode == 'IPK' and self.target_pose is not None:
             self.publish_joints()
 
@@ -121,19 +126,28 @@ class RobotController(Node):
             J = self.robot.jacob0(self.q)
             J_trans = J[0:3, :]
 
-            det_J = np.linalg.det(J_trans)
-
-            singularity_threshold = 1e-3
-        
-            if np.abs(det_J) < singularity_threshold:
-                self.get_logger().warn(f"Jacobian determinant is near zero. Determinant: {det_J}")
-                delta_q = np.zeros_like(delta_x)  
-            else:
-                delta_q = np.linalg.pinv(J_trans) @ delta_x
+            delta_q = np.linalg.pinv(J_trans) @ delta_x
 
             self.q = self.q + delta_q * 0.01
 
             self.publish_joints()
+
+            position_error = np.linalg.norm(delta_x)
+            position_threshold = 0.01
+
+            if position_error < position_threshold:
+                if not self.waiting_for_new_pose:
+                    self.start_time = time.time()
+                    self.get_logger().info(f"Target position reached. Error: {position_error}")
+                    self.waiting_for_new_pose = True
+
+            if self.waiting_for_new_pose:
+                elapsed_time = time.time() - self.start_time
+
+                if elapsed_time >= 1.0:
+                    self.request_random_pose()
+
+                    self.waiting_for_new_pose = False  
 
     def publish_joints(self):
         js = JointState()

@@ -77,7 +77,7 @@ class EndEffectorPublisher(Node):
                 self.get_logger().info(f"Orientation Error: {error_orient:.2f}")
 
         except Exception as e:
-            self.get_logger().error(f"Error: {e}")
+            return
 
 def main():
     rclpy.init()
