@@ -2,7 +2,7 @@
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, ExecuteProcess
+from launch.actions import IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 import os
@@ -46,10 +46,17 @@ def generate_launch_description():
         }]
     )
 
+    delay_2_sec = TimerAction(
+        period=2.0,
+        actions=[
+            controller,
+            random_target,
+            end_effector_pub
+        ]
+    )
+
     ld = LaunchDescription()
     ld.add_action(robot_desc_launch)
-    ld.add_action(controller)
-    ld.add_action(random_target)
-    ld.add_action(end_effector_pub)
+    ld.add_action(delay_2_sec)
 
     return ld

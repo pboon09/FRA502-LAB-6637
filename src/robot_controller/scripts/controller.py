@@ -25,10 +25,11 @@ class RobotController(Node):
         self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
         self.mode_srv = self.create_service(ControlMode, '/set_control_mode', self.set_mode_callback)
 
-        self.create_timer(1.0 / 100.0, self.timer_callback)  # 100Hz timer
+        self.create_timer(1.0 / 100.0, self.timer_callback)
 
         self.random_pose_client = self.create_client(RandomPose, '/random_pose')
 
+        self.q = np.radians([0, 90, 90])
         self.publish_joints()
         self.get_logger().info("RobotController started")
 
@@ -41,6 +42,8 @@ class RobotController(Node):
             self.get_logger().info(f"IPK Mode: Target position set to ({request.x}, {request.y}, {request.z})")
 
             success = self.compute_ik_solution(self.target_pose)
+            
+            response.current_mode = 0
 
             if success:
                 self.get_logger().info(f"IK Solution found: {self.q}")
@@ -56,10 +59,12 @@ class RobotController(Node):
             self.control_mode = 'AM'
             self.get_logger().info(f"Auto Mode: Requesting random pose")
             self.request_random_pose(response)
+            response.current_mode = 1
             response.success = True
             response.message = "Auto Mode initiated"
-            
+
         else:
+            response.current_mode = -1
             response.success = False
             response.message = "Invalid mode"
             self.get_logger().warn(f"Invalid mode: {request.mode}")
@@ -84,9 +89,6 @@ class RobotController(Node):
                 self.target_pose = SE3(random_pose.position.x, random_pose.position.y, random_pose.position.z)
                 self.get_logger().info(f"Random pose received: ({random_pose.position.x}, {random_pose.position.y}, {random_pose.position.z})")
                 self.control_mode = 'AM'
-                success = self.compute_ik_solution(self.target_pose)
-                if success:
-                    self.get_logger().info(f"IK Solution for random pose: {self.q}")
         except Exception as e:
             self.get_logger().error(f"Failed to get random pose: {e}")
 
@@ -110,6 +112,27 @@ class RobotController(Node):
             self.publish_joints()
 
         elif self.control_mode == 'AM' and self.target_pose is not None:
+            fk_pose = self.robot.fkine(self.q)
+            current_position = fk_pose.t.flatten()
+            target_position = self.target_pose.t.flatten()
+
+            delta_x = target_position - current_position 
+            
+            J = self.robot.jacob0(self.q)
+            J_trans = J[0:3, :]
+
+            det_J = np.linalg.det(J_trans)
+
+            singularity_threshold = 1e-3
+        
+            if np.abs(det_J) < singularity_threshold:
+                self.get_logger().warn(f"Jacobian determinant is near zero. Determinant: {det_J}")
+                delta_q = np.zeros_like(delta_x)  
+            else:
+                delta_q = np.linalg.pinv(J_trans) @ delta_x
+
+            self.q = self.q + delta_q * 0.01
+
             self.publish_joints()
 
     def publish_joints(self):

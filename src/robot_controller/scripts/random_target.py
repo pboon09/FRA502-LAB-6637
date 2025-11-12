@@ -7,7 +7,6 @@ from robot_interfaces.srv import RandomPose
 import numpy as np
 from tf_transformations import quaternion_from_euler
 
-
 class RandomPoseNode(Node):
     def __init__(self):
         super().__init__('random_pose_node')
@@ -22,13 +21,15 @@ class RandomPoseNode(Node):
         self.z_min = self.get_parameter('z_min').get_parameter_value().double_value
         self.z_max = self.get_parameter('z_max').get_parameter_value().double_value
 
-
         self.x_min = -self.r_max
         self.x_max = self.r_max
         self.y_min = -self.r_max
         self.y_max = self.r_max
 
         self.srv = self.create_service(RandomPose, '/random_pose', self.handle_request)
+
+        self.target_pub = self.create_publisher(PoseStamped, '/target', 10)
+
         self.get_logger().info('Random Pose Node started with workspace equation filter')
 
     def in_workspace(self, x, y, z):
@@ -61,6 +62,9 @@ class RandomPoseNode(Node):
 
         response.pose = msg
         self.get_logger().info(f"Random pose generated: x={p[0]:.3f}, y={p[1]:.3f}, z={p[2]:.3f}")
+
+        self.target_pub.publish(msg)
+
         return response
 
 
