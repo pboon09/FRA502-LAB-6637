@@ -87,10 +87,12 @@ class RobotController(Node):
             response.message = "Auto Mode Disabled"
 
         else:
-            response.current_mode = 0
+            self.last_target_pose = None
+            self.move = False
+            response.current_mode = request.mode
             response.success = False
-            response.message = "Invalid mode"
-            self.get_logger().warn(f"Invalid mode: {request.mode}")
+            response.message = "Idle mode"
+            self.get_logger().warn(f"Idle mode: {request.mode}")
 
         return response
 

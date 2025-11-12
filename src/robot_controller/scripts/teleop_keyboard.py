@@ -94,11 +94,13 @@ class TeleopKeyboard(Node):
 
     def process_key(self, key):
         if key == 'q':
+            self.request_mode(9)
             self.running = False
             print("\nexit")
             return
 
         if key in ('1', '2', '3'):
+            self.request_mode(9)
             self.current_panel = int(key) - 1
             self.show_panel(self.current_panel)
             self.status("panel switched")
@@ -166,8 +168,11 @@ class TeleopKeyboard(Node):
     def mode_response(self, future):
         try:
             res = future.result()
-            if res.success:
-                self.status(f"controller mode={res.current_mode} ok {res.message} {', '.join([f'{x:.2f}' for x in res.q_solution])}")
+            if res.success and res.current_mode != 9:
+                if res.current_mode == 0:
+                    self.status(f"controller mode={res.current_mode} : {res.message} with solution {', '.join([f'{x:.2f}' for x in res.q_solution])}")
+                else:
+                    self.status(f"controller mode={res.current_mode} : {res.message}")
             else:
                 self.status(f"controller error: {res.message}")
         except Exception as e:
