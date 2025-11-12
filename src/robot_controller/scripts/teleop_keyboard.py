@@ -24,6 +24,10 @@ class TeleopKeyboard(Node):
         self.show_panel(self.current_panel)
         self.status("ready")
 
+        self.x = None
+        self.y = None
+        self.z = None
+
     def clear(self):
         os.system('clear' if os.name == 'posix' else 'cls')
 
@@ -39,6 +43,7 @@ class TeleopKeyboard(Node):
                 "  3) AM\n"
                 "------------------------------\n"
                 "  q : quit\n"
+                "  r : enter target coordinates for IPK\n"
                 "==============================\n"
             )
         elif panel == 1:
@@ -108,10 +113,13 @@ class TeleopKeyboard(Node):
 
     def handle_ipk(self, key):
         if key == 'r':
-            # Take x, y, z from user input (could be modified to get from another source or service)
-            x, y, z = 0.5, 0.2, 0.3  # For example, replace with actual x, y, z values
-            self.request_mode(0, x, y, z)
-            self.status(f"IPK requested with x={x} y={y} z={z}")
+            # Prompt for IPK input
+            self.status("Enter x, y, z coordinates for IPK (press enter after each value)")
+            self.x = float(input("Enter x: "))
+            self.y = float(input("Enter y: "))
+            self.z = float(input("Enter z: "))
+            self.request_mode(0, self.x, self.y, self.z)
+            self.status(f"IPK requested with x={self.x} y={self.y} z={self.z}")
 
     def handle_teleop(self, key):
         twist = Twist()
@@ -159,7 +167,7 @@ class TeleopKeyboard(Node):
         try:
             res = future.result()
             if res.success:
-                self.status(f"controller mode={res.current_mode} {res.message} {res.q_solution}")
+                self.status(f"controller mode={res.current_mode} ok {res.message} {', '.join([f'{x:.2f}' for x in res.q_solution])}")
             else:
                 self.status(f"controller error: {res.message}")
         except Exception as e:
