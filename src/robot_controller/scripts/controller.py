@@ -59,7 +59,7 @@ class RobotController(Node):
         self.random_pose_client = self.create_client(RandomPose, '/random_pose')
         
 
-        self.q = np.radians([0, 0, 90])
+        self.q = np.radians([0, 0, 0])
         self.publish_joints()
         self.get_logger().info("RobotController started")
 
