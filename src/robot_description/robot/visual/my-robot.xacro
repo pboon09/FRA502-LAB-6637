@@ -26,7 +26,7 @@
     <joint name="link1_link2" type="revolute">
         <axis xyz="0 0 1"/>
         <limit effort="100" lower="-1.5708" upper="1.5708" velocity="1.0"/>
-        <origin rpy="0 -1.57 -1.57" xyz="0 -0.12 0"/>
+        <origin rpy="1.57 0 0" xyz="0 -0.12 0"/>
         <parent link="link_1"/>
         <child link="link_2"/>
 
@@ -37,13 +37,13 @@
             <geometry>
                 <mesh filename="file:///$(find robot_description)/meshes/link_2.stl"/>
             </geometry>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <origin rpy="3.14 0 0" xyz="0 0 0"/>
         </visual>
     </link>
     <joint name="link2_link3" type="revolute">
         <axis xyz="0 0 1"/>
         <limit effort="100" lower="-1.5708" upper="1.5708" velocity="1.0"/>
-        <origin rpy="0 0 0" xyz="0.25 0 0.1"/>
+        <origin rpy="0 0 0" xyz="0.25 0 -0.1"/>
         <parent link="link_2"/>
         <child link="link_3"/>
     </joint>
@@ -53,23 +53,22 @@
             <geometry>
                 <mesh filename="file:///$(find robot_description)/meshes/link_3.stl"/>
             </geometry>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <origin rpy="3.14 0 0" xyz="0 0 0"/>
         </visual>
     </link>
-    <joint name="link3_end" type="revolute">
-        <axis xyz="0 0 1"/>
-        <limit effort="100" lower="-1.5708" upper="1.5708" velocity="1.0"/>
-        <origin rpy="1.57 0 1.57" xyz="0.28 0 0"/>
+    <joint name="link3_end" type="fixed">
+        <origin rpy="0 0 0" xyz="0.28 0 0"/>
         <parent link="link_3"/>
         <child link="end_effector"/>
     </joint>
+
 
     <link name="end_effector">
         <visual>
             <geometry>
                 <mesh filename="file:///$(find robot_description)/meshes/end_effector.stl"/>
             </geometry>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <origin rpy="0 1.5708 0" xyz="0 0 0"/>
         </visual>
     </link>
 </robot>
