@@ -5,6 +5,7 @@ from rclpy.node import Node
 from robot_interfaces.srv import ControlMode, RandomPose
 from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import JointState
+from std_srvs.srv import Trigger
 import numpy as np
 import roboticstoolbox as rtb
 from spatialmath import SE3
@@ -14,6 +15,16 @@ import time
 class RobotController(Node):
     def __init__(self):
         super().__init__('robot_controller')
+
+        self.declare_parameter('r_min', 0.020)
+        self.declare_parameter('r_max', 0.530)
+        self.declare_parameter('z_min', -0.330)
+        self.declare_parameter('z_max', 0.730)
+
+        self.r_min = self.get_parameter('r_min').get_parameter_value().double_value
+        self.r_max = self.get_parameter('r_max').get_parameter_value().double_value
+        self.z_min = self.get_parameter('z_min').get_parameter_value().double_value
+        self.z_max = self.get_parameter('z_max').get_parameter_value().double_value
 
         L1 = rtb.RevoluteMDH(alpha=0, a=0, d=0.2, offset=0, qlim=[-np.pi/2, np.pi/2])
         L2 = rtb.RevoluteMDH(alpha=np.pi/2, a=0, d=0.12, offset=0, qlim=[-np.pi/2, np.pi/2])
@@ -26,6 +37,8 @@ class RobotController(Node):
         self.last_target_pose = None 
         self.control_mode = None
 
+        self.delta_q = 0.0
+
         self.task_space_velocity = np.zeros(3)
 
         self.start_time = None
@@ -37,13 +50,14 @@ class RobotController(Node):
         self.target_pub = self.create_publisher(PoseStamped, '/target', 10)
         self.velocity_pub = self.create_subscription(Twist, '/cmd_vel', self.velocity_callback, 10)
         self.mode_srv = self.create_service(ControlMode, '/set_control_mode', self.set_mode_callback)
+        self.reset_velocity_srv = self.create_client(Trigger, '/reset_velocity')
 
         self.create_timer(1.0 / 100.0, self.timer_callback)
 
         self.random_pose_client = self.create_client(RandomPose, '/random_pose')
         
 
-        self.q = np.radians([0, 90, 90])
+        self.q = np.radians([0, 0, 90])
         self.publish_joints()
         self.get_logger().info("RobotController started")
 
@@ -72,6 +86,7 @@ class RobotController(Node):
 
         elif request.mode == 1:
             self.control_mode = 'TO_WF'
+            self.publish_pose()
             self.get_logger().info(f"Teleoperation Mode: World Frame's Velocity Control")
             response.current_mode = 1
             response.success = True
@@ -79,6 +94,7 @@ class RobotController(Node):
 
         elif request.mode == 2:
             self.control_mode = 'TO_EF'
+            self.publish_pose()
             self.get_logger().info(f"Teleoperation Mode: End Effector Frame's Velocity Control")
             response.current_mode = 2
             response.success = True
@@ -110,6 +126,7 @@ class RobotController(Node):
         else:
             self.last_target_pose = None
             self.move = False
+            self.send_reset_velocity_request()
             self.publish_pose()
             response.current_mode = request.mode
             response.success = False
@@ -138,6 +155,26 @@ class RobotController(Node):
                 self.control_mode = 'AM'
         except Exception as e:
             self.get_logger().error(f"Failed to get random pose: {e}")
+    
+    def send_reset_velocity_request(self):
+        if not self.reset_velocity_srv.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn("Reset Velocity service not available")
+            return
+
+        request = Trigger.Request()
+
+        future = self.reset_velocity_srv.call_async(request)
+        future.add_done_callback(self.handle_reset_velocity_response)
+
+    def handle_reset_velocity_response(self, future):
+        try:
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f"Velocity reset: {response.message}")
+            else:
+                self.get_logger().warn(f"Failed to reset velocity: {response.message}")
+        except Exception as e:
+            self.get_logger().error(f"Service call failed: {e}")
 
     def compute_ik_solution(self, target_pose):
         success = False
@@ -168,9 +205,9 @@ class RobotController(Node):
             J = self.robot.jacob0(self.q)
             J_trans = J[0:3, :]
 
-            delta_q = np.linalg.pinv(J_trans) @ delta_x
+            self.delta_q = np.linalg.pinv(J_trans) @ delta_x
 
-            self.q = self.q + delta_q * 0.01
+            self.q = self.q + self.delta_q * 0.01
 
             self.publish_joints()
 
@@ -196,16 +233,29 @@ class RobotController(Node):
                 J = self.robot.jacob0(self.q)
                 J_trans = J[0:3, :]
                 
-                if self.control_mode == 'TO_EF':
-                    fk_pose = self.robot.fkine(self.q)
-                    rotation_matrix = fk_pose.R 
-                    task_space_velocity_ef = rotation_matrix.T @ self.task_space_velocity
+                manipulability_index = np.sqrt(np.linalg.det(J_trans.T @ J_trans))
+                
+                fk_pose = self.robot.fkine(self.q)
+                x, y, z = fk_pose.t.flatten()
 
-                    delta_q = np.linalg.pinv(J_trans) @ task_space_velocity_ef
+                self.get_logger().info(f"Current Position: x={x:.3f}, y={y:.3f}, z={z:.3f}, Manipulability: {manipulability_index:.6f} workspace check: {self.in_workspace(x, y, z)}")    
+
+                if manipulability_index < 5e-3 or not self.in_workspace(x, y, z):
+                    self.get_logger().warn("Low manipulability detected! Resetting velocity and backtracking.")
+                    self.send_reset_velocity_request()
+                    self.delta_q = -self.delta_q
+
                 else:
-                    delta_q = np.linalg.pinv(J_trans) @ self.task_space_velocity
+                    if self.control_mode == 'TO_EF':
+                        fk_pose = self.robot.fkine(self.q)
+                        rotation_matrix = fk_pose.R 
+                        task_space_velocity_ef = rotation_matrix.T @ self.task_space_velocity
 
-                self.q = self.q + delta_q * 0.01
+                        self.delta_q = np.linalg.pinv(J_trans) @ task_space_velocity_ef
+                    else:
+                        self.delta_q = np.linalg.pinv(J_trans) @ self.task_space_velocity
+
+                self.q = self.q + self.delta_q * 0.01
 
             self.publish_joints()
         
@@ -237,6 +287,10 @@ class RobotController(Node):
     
     def velocity_callback(self, msg):
         self.task_space_velocity = np.array([msg.linear.x, msg.linear.y, msg.linear.z])
+    
+    def in_workspace(self, x, y, z):
+        rho2 = x**2 + y**2 + 0.07
+        return (self.r_min**2 <= rho2 <= self.r_max**2) and (self.z_min <= z <= self.z_max)
 
 def main(args=None):
     rclpy.init(args=args)

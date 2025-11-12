@@ -3,6 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from robot_interfaces.srv import ControlMode
+from std_srvs.srv import Trigger
 from geometry_msgs.msg import Twist
 import sys, select, termios, tty, threading, os
 import numpy as np
@@ -13,9 +14,11 @@ class TeleopKeyboard(Node):
         self.mode_client = self.create_client(ControlMode, '/set_control_mode')
         self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
 
+        self.reset_vel_service = self.create_service(Trigger, '/reset_velocity', self.reset_velocity_callback)
+
         self.current_panel = 0  # 0=IPK, 1=TO, 2=AM
         self.running = True
-        self.speed = 0.05  # base speed for movement
+        self.speed = 0.05
         self.lock = threading.Lock()
 
         self.interactive_mode = sys.stdin.isatty()
@@ -25,18 +28,15 @@ class TeleopKeyboard(Node):
         self.show_panel(self.current_panel)
         self.status("ready")
 
-        # Initial position values for x, y, z (all starting at 0.0)
         self.x = 0.0
         self.y = 0.0
         self.z = 0.0
 
-        self.effector_frame_mode = True  # Default to Effector Frame
+        self.effector_frame_mode = False
 
-        # Joint velocity limit (1 rad/s)
-        self.vel_limit = 1.0  # in rad/s
-        self.step_size = 0.05  # Step size for control
+        self.vel_limit = 1.0
+        self.step_size = 0.05
 
-        # Set the fixed publishing rate to 100 Hz
         self.timer = self.create_timer(1.0 / 100.0, self.timer_callback)
 
     def clear(self):
@@ -113,7 +113,7 @@ class TeleopKeyboard(Node):
             return
 
         if key in ('1', '2', '3'):
-            self.request_mode(9)
+            self.request_mode(1) if int(key) == 2 else self.request_mode(9)
             self.current_panel = int(key) - 1
             self.show_panel(self.current_panel)
             self.status("panel switched")
@@ -177,7 +177,7 @@ class TeleopKeyboard(Node):
 
     def handle_auto_mode(self, key):
         if key == 'a':
-            self.request_mode(2)
+            self.request_mode(3)
             self.status("AM requested")
 
     def publish_velocity(self):
@@ -229,6 +229,16 @@ class TeleopKeyboard(Node):
 
     def timer_callback(self):
         self.publish_velocity()
+    
+    def reset_velocity_callback(self, request, response):
+        self.x = 0.0
+        self.y = 0.0
+        self.z = 0.0
+        self.publish_velocity()
+        response.success = True
+        response.message = "Velocity reset to zero"
+        self.status(f"\rCurrent Mode: {'Effector Frame' if self.effector_frame_mode else 'World Frame'} Velocity updated: {self.x:.2f}, {self.y:.2f}, {self.z:.2f}")
+        return response
 
     def run(self):
         thread = threading.Thread(target=self.keyboard_loop, daemon=True)
