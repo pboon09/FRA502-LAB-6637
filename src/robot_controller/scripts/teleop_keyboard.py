@@ -12,7 +12,7 @@ class TeleopKeyboard(Node):
         self.mode_client = self.create_client(ControlMode, '/set_control_mode')
         self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
 
-        self.current_panel = 0  # 0=IPK, 1=TO, 2=AM (local panel only)
+        self.current_panel = 0  # 0=IPK, 1=TO, 2=AM
         self.running = True
         self.speed = 0.05
         self.lock = threading.Lock()
@@ -115,7 +115,6 @@ class TeleopKeyboard(Node):
 
     def handle_ipk(self, key):
         if key == 'r':
-            # Prompt for IPK input
             self.status("Enter x, y, z coordinates for IPK (press enter after each value)")
             self.x = float(input("Enter x: "))
             self.y = float(input("Enter y: "))
@@ -149,7 +148,7 @@ class TeleopKeyboard(Node):
 
     def handle_auto_mode(self, key):
         if key == 'a':
-            self.request_mode(2)  # AM mode
+            self.request_mode(2)
             self.status("AM requested")
 
     def request_mode(self, mode, x=None, y=None, z=None):

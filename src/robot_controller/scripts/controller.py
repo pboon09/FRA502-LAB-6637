@@ -3,10 +3,12 @@
 import rclpy
 from rclpy.node import Node
 from robot_interfaces.srv import ControlMode, RandomPose
+from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import JointState
 import numpy as np
 import roboticstoolbox as rtb
 from spatialmath import SE3
+from tf_transformations import quaternion_from_euler
 import time
 
 class RobotController(Node):
@@ -30,6 +32,7 @@ class RobotController(Node):
         self.move = False
 
         self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
+        self.target_pub = self.create_publisher(PoseStamped, '/target', 10)
         self.mode_srv = self.create_service(ControlMode, '/set_control_mode', self.set_mode_callback)
 
         self.create_timer(1.0 / 100.0, self.timer_callback)
@@ -47,6 +50,7 @@ class RobotController(Node):
         if request.mode == 0:
             self.control_mode = 'IPK'
             self.target_pose = SE3([request.x, request.y, request.z])
+            self.publish_pose(request.x, request.y, request.z)
             self.get_logger().info(f"IPK Mode: Target position set to ({request.x}, {request.y}, {request.z})")
 
             success = self.compute_ik_solution(self.target_pose)
@@ -89,6 +93,7 @@ class RobotController(Node):
         else:
             self.last_target_pose = None
             self.move = False
+            self.publish_pose()
             response.current_mode = request.mode
             response.success = False
             response.message = "Idle mode"
@@ -175,6 +180,22 @@ class RobotController(Node):
         js.name = ['base_to_link1', 'link1_link2', 'link2_link3']
         js.position = self.q.tolist()
         self.joint_pub.publish(js)
+    
+    def publish_pose(self, x = 0.0, y = 0.0, z = 0.0):
+        msg = PoseStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'link_0'
+        msg.pose.position.x = x
+        msg.pose.position.y = y
+        msg.pose.position.z = z
+
+        q = quaternion_from_euler(0, 0, 0)
+        msg.pose.orientation.x = q[0]
+        msg.pose.orientation.y = q[1]
+        msg.pose.orientation.z = q[2]
+        msg.pose.orientation.w = q[3]
+
+        self.target_pub.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)
