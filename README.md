@@ -16,6 +16,7 @@
     - [1. Launch Main System](#1-launch-main-system)
     - [2. Start Keyboard Controller (Separate Terminal)](#2-start-keyboard-controller-separate-terminal)
     - [3. Control Operations](#3-control-operations)
+  - [Launch file Configuration](#launch-file-configuration)
   - [Acknowledgments](#acknowledgments)
 
 ## Demo Video
@@ -27,14 +28,16 @@ This ROS2 project is designed to control a 3-DOF robotic arm using inverse kinem
 
 
 ## System Architecture
-[![SA](./media/SA.jpg)](./media/SA.pdf)
+[![SA](./media/SA.png)](./media/SA.pdf)
 ### Core Components
 
 **1. Universal Controller** (`controller.py`)
 A sophisticated node that adapts its behavior based on the robot's control mode:
-   - Inverse Kinematics Mode (IPK): Computes joint configurations to reach a target position in task space.
-   - Teleoperation Mode (TO): Moves the robot in response to velocity commands, either in the world frame or end effector frame.
-    - Auto Mode (AM): Requests a random pose and moves the robot to it.
+  - Inverse Kinematics Mode (IPK): Computes joint configurations to reach a target position in task space.
+  
+  - Teleoperation Mode (TO): Moves the robot in response to velocity commands, either in the world frame or end effector frame.
+
+  - Auto Mode (AM): Requests a random pose and moves the robot to it.
 
 **2. Random Target Generation** (`random_target.py`)
 This node generates random target poses within the defined workspace, ensuring that the generated poses are within the robot's operating limits. These poses are served via a ROS2 service (`/random_pose`).
@@ -140,6 +143,30 @@ Control/Mode:
   - r: Enter target coordinates for IPK (x, y, z)
   - a: Start/step Auto Mode (AM)
   - q: Quit the teleoperation interface
+
+## Launch file Configuration
+You can modify the workspace size by changing the following parameters in the launch file:
+```python
+'parameters': [{
+    'r_min': 0.020,
+    'r_max': 0.530,
+    'z_min': -0.330,
+    'z_max': 0.730
+}]
+```
+
+If you want to print the comparison between forward kinematics (FK) and transform (TF), you can enable the `debug` parameter in the launch file:
+```python
+end_effector_pub = Node(
+    package='robot_controller',
+    executable='end_effector_pose.py',
+    name='end_effector_publisher',
+    output='screen',
+    parameters=[{
+        'debug': True  # Set to True to print FK and TF comparison output
+    }]
+)
+```
 
 ## Acknowledgments
 

@@ -20,7 +20,13 @@ def generate_launch_description():
         package='robot_controller',
         executable='controller.py',
         name='robot_controller',
-        output='screen'
+        output='screen',
+        parameters=[{
+            'r_min': 0.020,
+            'r_max': 0.530,
+            'z_min': -0.330,
+            'z_max': 0.730
+        }]
     )
 
     random_target = Node(
@@ -30,9 +36,9 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'r_min': 0.020,
-            'r_max': 0.251,
-            'z_min': 0.002,
-            'z_max': 0.450
+            'r_max': 0.530,
+            'z_min': -0.330,
+            'z_max': 0.730
         }]
     )
 
