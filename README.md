@@ -74,6 +74,28 @@ Add to your `~/.bashrc`:
 ```bash
 echo "source ~/FRA502-LAB-6637/install/setup.bash" >> ~/.bashrc  
 ```
+## Custom Service Interfaces
+
+The project defines several custom service interfaces:
+
+**ControlMode.srv**:
+```
+uint8 mode
+float64 x
+float64 y
+float64 z
+---
+uint8 current_mode
+bool success
+string message
+float64[] q_solution 
+```
+
+**RandomPose.srv**:
+```
+---
+geometry_msgs/PoseStamped pose
+```
 
 Then source:
 ```bash
