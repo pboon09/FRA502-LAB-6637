@@ -22,10 +22,10 @@ def generate_launch_description():
         name='robot_controller',
         output='screen',
         parameters=[{
-            'r_min': 0.020,
-            'r_max': 0.530,
-            'z_min': -0.330,
-            'z_max': 0.730
+            'rho_min': 0.020,
+            'rho_max': 0.530,
+            'z_center': 0.200,
+            'z_radius': 0.530
         }]
     )
 
@@ -35,10 +35,10 @@ def generate_launch_description():
         name='random_target_node',
         output='screen',
         parameters=[{
-            'r_min': 0.020,
-            'r_max': 0.530,
-            'z_min': -0.330,
-            'z_max': 0.730
+            'rho_min': 0.020,
+            'rho_max': 0.530,
+            'z_center': 0.200,
+            'z_radius': 0.530
         }]
     )
 

@@ -11,20 +11,22 @@ class RandomPoseNode(Node):
     def __init__(self):
         super().__init__('random_pose_node')
 
-        self.declare_parameter('r_min', 0.020)
-        self.declare_parameter('r_max', 0.530)
-        self.declare_parameter('z_min', -0.330)
-        self.declare_parameter('z_max', 0.730)
+        self.declare_parameter('rho_min', 0.0200)
+        self.declare_parameter('rho_max', 0.5304)
+        self.declare_parameter('z_center', 0.2000)
+        self.declare_parameter('z_radius', 0.5300)
 
-        self.r_min = self.get_parameter('r_min').get_parameter_value().double_value
-        self.r_max = self.get_parameter('r_max').get_parameter_value().double_value
-        self.z_min = self.get_parameter('z_min').get_parameter_value().double_value
-        self.z_max = self.get_parameter('z_max').get_parameter_value().double_value
+        self.rho_min = self.get_parameter('rho_min').get_parameter_value().double_value
+        self.rho_max = self.get_parameter('rho_max').get_parameter_value().double_value
+        self.z_center = self.get_parameter('z_center').get_parameter_value().double_value
+        self.z_radius = self.get_parameter('z_radius').get_parameter_value().double_value
 
-        self.x_min = -self.r_max
-        self.x_max = self.r_max
-        self.y_min = -self.r_max
-        self.y_max = self.r_max
+        self.x_min = -self.rho_max
+        self.x_max = self.rho_max
+        self.y_min = -self.rho_max
+        self.y_max = self.rho_max
+        self.z_min = self.z_center - self.z_radius
+        self.z_max = self.z_center + self.z_radius
 
         self.srv = self.create_service(RandomPose, '/random_pose', self.handle_request)
 
@@ -33,8 +35,14 @@ class RandomPoseNode(Node):
         self.get_logger().info('Random Pose Node started with workspace equation filter')
 
     def in_workspace(self, x, y, z):
-        rho2 = x**2 + y**2
-        return (self.r_min**2 <= rho2 <= self.r_max**2) and (self.z_min <= z <= self.z_max)
+        rho = np.sqrt(x**2 + y**2)
+        
+        if rho < self.rho_min:
+            return False
+        
+        rho_norm = (rho - self.rho_min) / (self.rho_max - self.rho_min)
+        z_norm = (z - self.z_center) / self.z_radius
+        return (rho_norm**2 + z_norm**2) <= 1.0
 
     def random_point_in_workspace(self):
         while True:

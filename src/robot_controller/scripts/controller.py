@@ -16,15 +16,15 @@ class RobotController(Node):
     def __init__(self):
         super().__init__('robot_controller')
 
-        self.declare_parameter('r_min', 0.020)
-        self.declare_parameter('r_max', 0.530)
-        self.declare_parameter('z_min', -0.330)
-        self.declare_parameter('z_max', 0.730)
+        self.declare_parameter('rho_min', 0.0200)
+        self.declare_parameter('rho_max', 0.5304)
+        self.declare_parameter('z_center', 0.2000)
+        self.declare_parameter('z_radius', 0.5300)
 
-        self.r_min = self.get_parameter('r_min').get_parameter_value().double_value
-        self.r_max = self.get_parameter('r_max').get_parameter_value().double_value
-        self.z_min = self.get_parameter('z_min').get_parameter_value().double_value
-        self.z_max = self.get_parameter('z_max').get_parameter_value().double_value
+        self.rho_min = self.get_parameter('rho_min').get_parameter_value().double_value
+        self.rho_max = self.get_parameter('rho_max').get_parameter_value().double_value
+        self.z_center = self.get_parameter('z_center').get_parameter_value().double_value
+        self.z_radius = self.get_parameter('z_radius').get_parameter_value().double_value
 
         L1 = rtb.RevoluteMDH(alpha=0, a=0, d=0.2, offset=0, qlim=[-np.pi/2, np.pi/2])
         L2 = rtb.RevoluteMDH(alpha=np.pi/2, a=0, d=0.12, offset=0, qlim=[-np.pi/2, np.pi/2])
@@ -57,7 +57,6 @@ class RobotController(Node):
         self.create_timer(1.0 / self.hz, self.timer_callback)
 
         self.random_pose_client = self.create_client(RandomPose, '/random_pose')
-        
 
         self.q = np.radians([0, 0, 0])
         self.publish_joints()
@@ -293,8 +292,14 @@ class RobotController(Node):
         self.task_space_velocity = np.array([msg.linear.x, msg.linear.y, msg.linear.z])
     
     def in_workspace(self, x, y, z):
-        rho2 = x**2 + y**2 + 0.07
-        return (self.r_min**2 <= rho2 <= self.r_max**2) and (self.z_min <= z <= self.z_max)
+        rho = np.sqrt(x**2 + y**2)
+        
+        if rho < self.rho_min:
+            return False
+        
+        rho_norm = (rho - self.rho_min) / (self.rho_max - self.rho_min)
+        z_norm = (z - self.z_center) / self.z_radius
+        return (rho_norm**2 + z_norm**2) <= 1.0
 
 def main(args=None):
     rclpy.init(args=args)
@@ -304,3 +309,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+    
